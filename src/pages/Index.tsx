@@ -229,12 +229,7 @@ export default function Index() {
               Loading project data…
             </div>
           ) : (
-            <ProjectTable
-              projects={filteredProjects}
-              onSubmitData={(id, name) => {
-                setOperatorModalOpen(true);
-              }}
-            />
+            <ProjectTable projects={filteredProjects} />
           )}
         </section>
 
