@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Shield, Satellite, FlaskConical, Users, Brain, AlertTriangle, TrendingUp, ExternalLink } from "lucide-react";
+import { X, Satellite, FlaskConical, Users, Brain, AlertTriangle, TrendingUp, ExternalLink } from "lucide-react";
 import type { MapZone } from "@/data/mockData";
 import { mapZones } from "@/data/mockData";
 
@@ -105,6 +105,12 @@ function ZonePanel({ zone, onClose }: ZonePanelProps) {
           </div>
         </div>
 
+        {/* Filtering note */}
+        <div className="border border-recovery/20 rounded p-2.5 bg-recovery-dim text-xs text-recovery flex items-center gap-2">
+          <TrendingUp size={11} />
+          Dashboard filtered to <strong>{zone.region}</strong>
+        </div>
+
         {/* RVE link */}
         <div className="border-t border-border pt-3">
           <button className="w-full flex items-center justify-between text-xs text-foreground-muted hover:text-recovery transition-colors py-1.5 px-3 rounded border border-border hover:border-recovery/30 bg-surface hover:bg-recovery-dim">
@@ -119,7 +125,12 @@ function ZonePanel({ zone, onClose }: ZonePanelProps) {
 
 const AFRICA_PATH = "M 200 30 L 230 25 L 270 30 L 300 50 L 320 80 L 330 120 L 335 160 L 340 200 L 345 240 L 335 280 L 310 310 L 280 340 L 250 370 L 230 395 L 210 410 L 190 395 L 170 370 L 150 340 L 120 310 L 95 280 L 85 240 L 90 200 L 95 160 L 100 120 L 110 80 L 130 50 L 165 30 Z";
 
-export function RegenerationMap() {
+interface RegenerationMapProps {
+  selectedRegion: string;
+  onRegionSelect: (region: string) => void;
+}
+
+export function RegenerationMap({ selectedRegion, onRegionSelect }: RegenerationMapProps) {
   const [selectedZone, setSelectedZone] = useState<MapZone | null>(null);
   const [activeLayer, setActiveLayer] = useState<string[]>(["forest", "watershed", "biodiversity", "health", "employment", "carbon"]);
   const [viewMode, setViewMode] = useState<"heatmap" | "polygon">("heatmap");
@@ -132,15 +143,56 @@ export function RegenerationMap() {
 
   const visibleZones = mapZones.filter(z => activeLayer.includes(z.type));
 
+  const handleZoneClick = (zone: MapZone) => {
+    if (selectedZone?.id === zone.id) {
+      // Deselect — reset to all regions
+      setSelectedZone(null);
+      onRegionSelect("All Regions");
+    } else {
+      setSelectedZone(zone);
+      // Map region to FilterBar format
+      const regionLabel = zone.country === "Kenya"
+        ? `Kenya — ${zone.region}`
+        : zone.country === "DRC"
+        ? `DRC — ${zone.region}`
+        : zone.country === "Niger"
+        ? `Niger — Sahel`
+        : zone.country === "Botswana"
+        ? `Botswana — Ngamiland`
+        : "All Regions";
+      onRegionSelect(regionLabel);
+    }
+  };
+
+  const closePanel = () => {
+    setSelectedZone(null);
+    onRegionSelect("All Regions");
+  };
+
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden">
       {/* Map header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div>
           <div className="text-xs text-foreground-subtle uppercase tracking-widest font-mono">Spatial Impact</div>
-          <div className="font-semibold text-foreground">Regeneration Map</div>
+          <div className="font-semibold text-foreground flex items-center gap-2">
+            Regeneration Map
+            {selectedRegion !== "All Regions" && (
+              <span className="text-xs font-normal px-2 py-0.5 rounded border border-recovery/30 text-recovery bg-recovery-dim font-mono">
+                Filtering: {selectedRegion}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          {selectedRegion !== "All Regions" && (
+            <button
+              onClick={closePanel}
+              className="text-xs px-2.5 py-1 rounded border border-border text-foreground-subtle hover:text-foreground hover:border-watch/40 transition-colors"
+            >
+              Clear filter
+            </button>
+          )}
           {(["heatmap", "polygon"] as const).map(m => (
             <button
               key={m}
@@ -167,6 +219,7 @@ export function RegenerationMap() {
             {type}
           </button>
         ))}
+        <span className="ml-auto text-[10px] text-foreground-subtle self-center font-mono">Click a zone to filter dashboard</span>
       </div>
 
       {/* Map body */}
@@ -200,45 +253,44 @@ export function RegenerationMap() {
             const color = typeColors[zone.type];
             const alpha = statusOpacity[zone.status] || 0.5;
             const isSelected = selectedZone?.id === zone.id;
+            // Dim zones not in selected region
+            const regionKey = zone.country === "Kenya" ? `Kenya — ${zone.region}` : zone.country === "DRC" ? `DRC — ${zone.region}` : zone.country === "Niger" ? "Niger — Sahel" : "Botswana — Ngamiland";
+            const isDimmed = selectedRegion !== "All Regions" && regionKey !== selectedRegion;
 
             return (
-              <g key={zone.id} onClick={() => setSelectedZone(isSelected ? null : zone)} className="cursor-pointer">
-                {/* Outer pulse ring */}
-                {(zone.status === "recovering" || (zone.status as string) === "accelerating") && (
-                  <circle
-                    cx={x} cy={y} r={r + 6}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth="1"
-                    opacity={0.2}
-                  />
+              <g
+                key={zone.id}
+                onClick={() => handleZoneClick(zone)}
+                style={{ cursor: "pointer", opacity: isDimmed ? 0.2 : 1, transition: "opacity 0.3s" }}
+              >
+                {/* Outer pulse ring for recovering/accelerating */}
+                {(zone.status === "recovering" || (zone.status as string) === "accelerating") && !isDimmed && (
+                  <circle cx={x} cy={y} r={r + 6} fill="none" stroke={color} strokeWidth="1" opacity={0.2} />
                 )}
-                {/* Main dot */}
+                {/* Heatmap glow */}
                 {viewMode === "heatmap" ? (
-                  <circle
-                    cx={x} cy={y} r={r + 8}
-                    fill={color}
-                    opacity={alpha * 0.25}
-                  />
+                  <circle cx={x} cy={y} r={r + 8} fill={color} opacity={alpha * 0.25} />
                 ) : null}
+                {/* Main dot */}
                 <circle
                   cx={x} cy={y} r={r}
                   fill={color}
                   opacity={isSelected ? 1 : alpha}
                   stroke={isSelected ? "white" : color}
-                  strokeWidth={isSelected ? 2 : 0.5}
+                  strokeWidth={isSelected ? 2.5 : 0.5}
                 />
-                {/* Label */}
+                {/* Selected label */}
                 {isSelected && (
-                  <text x={x + r + 4} y={y + 4} fill="white" fontSize="8" fontFamily="DM Mono">{zone.name}</text>
+                  <text x={x + r + 5} y={y + 4} fill="white" fontSize="9" fontFamily="DM Mono" fontWeight="500">{zone.name}</text>
                 )}
+                {/* Hover hit area */}
+                <circle cx={x} cy={y} r={r + 8} fill="transparent" />
               </g>
             );
           })}
 
           {/* Compass */}
           <text x="410" y="430" fill="hsl(160 8% 30%)" fontSize="9" fontFamily="DM Mono">N↑</text>
-
           {/* Scale */}
           <line x1="20" y1="425" x2="80" y2="425" stroke="hsl(160 8% 30%)" strokeWidth="1" />
           <text x="20" y="420" fill="hsl(160 8% 30%)" fontSize="8" fontFamily="DM Mono">0</text>
@@ -247,10 +299,10 @@ export function RegenerationMap() {
 
         {/* Selected zone panel */}
         {selectedZone && (
-          <ZonePanel zone={selectedZone} onClose={() => setSelectedZone(null)} />
+          <ZonePanel zone={selectedZone} onClose={closePanel} />
         )}
 
-        {/* Active zone count */}
+        {/* Status bar */}
         <div className="absolute bottom-3 left-3 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded border border-border text-xs text-foreground-muted font-mono">
           {visibleZones.length} active zones · {visibleZones.filter(z => z.status === "recovering").length} recovering
         </div>
