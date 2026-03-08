@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import type { AppRole } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
+
+export type AppRole = Database["public"]["Enums"]["app_role"];
 
 export interface AuthState {
   user: User | null;
@@ -17,20 +19,17 @@ export function useAuth(): AuthState {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up listener BEFORE getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      async (_event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
 
-        if (session?.user) {
-          // Fetch role asynchronously to avoid deadlock
+        if (newSession?.user) {
           setTimeout(async () => {
             const { data } = await supabase
               .from("user_roles")
               .select("role")
-              .eq("user_id", session.user.id)
-              .order("role")
+              .eq("user_id", newSession.user.id)
               .limit(1)
               .maybeSingle();
             setRole((data?.role as AppRole) ?? null);
