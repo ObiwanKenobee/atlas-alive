@@ -1,6 +1,5 @@
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, ExternalLink } from "lucide-react";
 import type { Project } from "@/data/mockData";
-import { projects } from "@/data/mockData";
 
 const trendIcon = {
   accelerating: <TrendingUp size={12} className="text-recovery" />,
