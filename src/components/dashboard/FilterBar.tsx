@@ -73,7 +73,7 @@ export function FilterBar({
 
         <div className="flex-1 flex flex-wrap items-center gap-2">
           <DropdownSelect label="Region" icon={Globe2} value={selectedRegion} options={REGIONS} onChange={setSelectedRegion} />
-          <DropdownSelect label="Sector" icon={BarChart2} value={selectedSector} options={SECTORS} onChange={setSel} onChange={setSelectedSector} />
+          <DropdownSelect label="Sector" icon={BarChart2} value={selectedSector} options={SECTORS} onChange={setSelectedSector} />
           <DropdownSelect label="Source" icon={CheckCircle} value={selectedVerification} options={VERIFICATION} onChange={setSelectedVerification} />
         </div>
 
