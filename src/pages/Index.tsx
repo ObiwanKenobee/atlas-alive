@@ -9,12 +9,16 @@ import { RVEPanel } from "@/components/dashboard/RVEPanel";
 import { ProjectTable } from "@/components/dashboard/ProjectTable";
 import { ScenarioPanel } from "@/components/dashboard/ScenarioPanel";
 import { ExportMenu } from "@/components/dashboard/ExportMenu";
+import { FieldOperatorModal } from "@/components/dashboard/FieldOperatorModal";
+import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
+import { RoleGate } from "@/components/dashboard/RoleGate";
+import { useAuth } from "@/hooks/useAuth";
+import { useProjects } from "@/hooks/useProjects";
 import {
   heroMetrics,
   hectaresTimeSeries,
   carbonTimeSeries,
   waterTimeSeries,
-  projects,
 } from "@/data/mockData";
 
 export default function Index() {
@@ -22,15 +26,12 @@ export default function Index() {
   const [sector, setSector] = useState("All Sectors");
   const [verification, setVerification] = useState("All Sources");
   const [timeMode, setTimeMode] = useState("12m");
+  const [operatorModalOpen, setOperatorModalOpen] = useState(false);
 
-  // Filtered projects based on selected region
-  const filteredProjects = region === "All Regions"
-    ? projects
-    : projects.filter(p =>
-        region.includes(p.country) ||
-        region.toLowerCase().includes(p.region.toLowerCase()) ||
-        p.region.toLowerCase().includes(region.split("—")[1]?.trim().toLowerCase() ?? "")
-      );
+  const { role } = useAuth();
+
+  // Live projects from Supabase, falling back to mock data
+  const { data: filteredProjects = [], isLoading: projectsLoading } = useProjects(region);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -44,6 +45,7 @@ export default function Index() {
         setSelectedVerification={setVerification}
         selectedTime={timeMode}
         setSelectedTime={setTimeMode}
+        onOpenOperatorForm={() => setOperatorModalOpen(true)}
         exportMenu={
           <ExportMenu
             selectedRegion={region}
@@ -95,11 +97,22 @@ export default function Index() {
           </div>
         </section>
 
-        {/* ── Section 3: Map + Trends ───────────────────────────────────────── */}
+        {/* ── Section 3: At-Risk Alerts (conditionally shown) ──────────────── */}
+        {filteredProjects.length > 0 && (
+          <section>
+            <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="w-3 h-px bg-foreground-subtle" />
+              02 · At-Risk Signal Monitor
+            </div>
+            <AlertsPanel projects={filteredProjects} />
+          </section>
+        )}
+
+        {/* ── Section 4: Map + Trends ───────────────────────────────────────── */}
         <section>
           <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
             <span className="w-3 h-px bg-foreground-subtle" />
-            02 · Spatial Impact
+            03 · Spatial Impact
           </div>
           <div className="grid lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
@@ -133,11 +146,11 @@ export default function Index() {
           </div>
         </section>
 
-        {/* ── Section 4: Trend deep-dive + categories ───────────────────────── */}
+        {/* ── Section 5: Trend deep-dive + categories ───────────────────────── */}
         <section>
           <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
             <span className="w-3 h-px bg-foreground-subtle" />
-            03 · Trend & Category Analysis
+            04 · Trend & Category Analysis
           </div>
           <div className="grid lg:grid-cols-3 gap-4">
             <div className="space-y-4">
@@ -158,57 +171,84 @@ export default function Index() {
           </div>
         </section>
 
-        {/* ── Section 5: Verification ───────────────────────────────────────── */}
+        {/* ── Section 6: Verification ───────────────────────────────────────── */}
         <section>
           <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
             <span className="w-3 h-px bg-foreground-subtle" />
-            04 · Verification & Trust
+            05 · Verification & Trust
           </div>
           <VerificationPanel />
         </section>
 
-        {/* ── Section 6: RVE Economic Translation ──────────────────────────── */}
-        <section>
-          <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
-            <span className="w-3 h-px bg-foreground-subtle" />
-            05 · Regenerative Value Exchange
-          </div>
-          <RVEPanel />
-        </section>
+        {/* ── Section 7: RVE Economic Translation (investors + execs) ──────── */}
+        <RoleGate
+          role={role}
+          allow={["investor", "executive", "government"]}
+          fallback={
+            // Show to all when not logged in (public view)
+            !role ? <section>
+              <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="w-3 h-px bg-foreground-subtle" />
+                06 · Regenerative Value Exchange
+              </div>
+              <RVEPanel />
+            </section> : null
+          }
+        >
+          <section>
+            <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span className="w-3 h-px bg-foreground-subtle" />
+              06 · Regenerative Value Exchange
+            </div>
+            <RVEPanel />
+          </section>
+        </RoleGate>
 
-        {/* ── Section 7: Scenario Modeling ─────────────────────────────────── */}
+        {/* ── Section 8: Scenario Modeling ─────────────────────────────────── */}
         <section>
           <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
             <span className="w-3 h-px bg-foreground-subtle" />
-            06 · What-If Analysis
+            07 · What-If Analysis
           </div>
           <ScenarioPanel />
         </section>
 
-        {/* ── Section 8: Project Table ──────────────────────────────────────── */}
+        {/* ── Section 9: Project Table ──────────────────────────────────────── */}
         <section>
           <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
             <span className="w-3 h-px bg-foreground-subtle" />
-            07 · Project Explorer
+            08 · Project Explorer
             {region !== "All Regions" && (
               <span className="text-recovery font-mono">
-                · {filteredProjects.length} of {projects.length} projects
+                · {filteredProjects.length} projects
               </span>
             )}
           </div>
-          <ProjectTable projects={filteredProjects} />
+          {projectsLoading ? (
+            <div className="h-32 bg-surface border border-border rounded-lg flex items-center justify-center text-foreground-subtle text-sm font-mono">
+              Loading project data…
+            </div>
+          ) : (
+            <ProjectTable projects={filteredProjects} />
+          )}
         </section>
 
         {/* Footer */}
         <footer className="border-t border-border pt-6 pb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="text-xs text-foreground-subtle font-mono">
-            Atlas Regenerative OS · Impact Dashboard v0.1
+            Atlas Regenerative OS · Impact Dashboard v0.2 · Lovable Cloud
           </div>
           <div className="text-[10px] text-foreground-subtle">
             Data freshness: Carbon 7d · Biodiversity 30d · Health 90d · Land 48h · Water 14d
           </div>
         </footer>
       </div>
+
+      {/* Field operator data entry modal */}
+      <FieldOperatorModal
+        open={operatorModalOpen}
+        onClose={() => setOperatorModalOpen(false)}
+      />
     </div>
   );
 }
