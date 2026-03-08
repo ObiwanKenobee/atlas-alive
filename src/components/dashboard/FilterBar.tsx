@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Filter, ChevronDown, Globe2, Clock, CheckCircle, BarChart2 } from "lucide-react";
+import { Filter, ChevronDown, Globe2, Clock, CheckCircle, BarChart2, ClipboardList } from "lucide-react";
+import { AuthPanel } from "@/components/dashboard/AuthPanel";
+import { useAuth } from "@/hooks/useAuth";
 
 const REGIONS = ["All Regions", "Kenya — Rift Valley", "Kenya — Eastern", "Kenya — Western", "DRC — Équateur", "Niger — Sahel", "Botswana — Ngamiland"];
 const SECTORS = ["All Sectors", "Forest", "Water", "Health", "Biodiversity", "Jobs", "Carbon"];
@@ -16,6 +18,7 @@ export interface FilterBarProps {
   selectedTime: string;
   setSelectedTime: (v: string) => void;
   exportMenu?: React.ReactNode;
+  onOpenOperatorForm: () => void;
 }
 
 function DropdownSelect({
@@ -61,7 +64,11 @@ export function FilterBar({
   selectedVerification, setSelectedVerification,
   selectedTime, setSelectedTime,
   exportMenu,
+  onOpenOperatorForm,
 }: FilterBarProps) {
+  const { role } = useAuth();
+  const isOperator = role === "operator" || role === "admin";
+
   return (
     <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
       <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center gap-2">
@@ -90,7 +97,17 @@ export function FilterBar({
           <Filter size={12} />
           Compare
         </button>
+        {isOperator && (
+          <button
+            onClick={onOpenOperatorForm}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-recovery/30 bg-recovery-dim text-recovery text-xs font-semibold hover:bg-recovery hover:text-background transition-colors"
+          >
+            <ClipboardList size={12} />
+            Submit Data
+          </button>
+        )}
         {exportMenu}
+        <AuthPanel onOpenOperatorForm={onOpenOperatorForm} />
       </div>
     </div>
   );
