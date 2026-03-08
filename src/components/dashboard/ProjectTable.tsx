@@ -106,10 +106,9 @@ function ProjectRow({ project }: { project: Project }) {
   );
 }
 
-export function ProjectTable() {
+export function ProjectTable({ projects }: { projects: Project[] }) {
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden">
-      {/* Header */}
       <div className="flex items-start justify-between px-4 py-3 border-b border-border">
         <div>
           <div className="text-xs text-foreground-subtle uppercase tracking-widest font-mono mb-1">Project Intelligence</div>
@@ -118,24 +117,30 @@ export function ProjectTable() {
         <div className="text-xs text-foreground-subtle font-mono">{projects.length} projects</div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border bg-surface-raised">
-              {["Project / Location", "Type", "Baseline → Current", "Confidence", "Est. Value", "Trend", "Risk", "Last Verified", ""].map((h) => (
-                <th key={h} className="py-2 px-3 text-left text-[10px] text-foreground-subtle uppercase tracking-widest font-medium whitespace-nowrap">
-                  {h}
-                </th>
+      {projects.length === 0 ? (
+        <div className="py-12 text-center text-foreground-subtle text-sm">
+          No verified restoration signals yet for this region and time range.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-surface-raised">
+                {["Project / Location", "Type", "Baseline → Current", "Confidence", "Est. Value", "Trend", "Risk", "Last Verified", ""].map((h) => (
+                  <th key={h} className="py-2 px-3 text-left text-[10px] text-foreground-subtle uppercase tracking-widest font-medium whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {projects.map(project => (
+                <ProjectRow key={project.id} project={project} />
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map(project => (
-              <ProjectRow key={project.id} project={project} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
