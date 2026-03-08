@@ -78,7 +78,7 @@ function SliderRow({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-foreground-muted">{label}</span>
-          {info && <Info size={10} className="text-foreground-subtle" title={info} />}
+          {info && <span title={info}><Info size={10} className="text-foreground-subtle" /></span>}
         </div>
         <span className="font-mono text-sm text-recovery font-semibold">
           {value.toLocaleString()} {unit}

@@ -7,11 +7,14 @@ import { ImpactCategoryTabs } from "@/components/dashboard/ImpactCategoryTabs";
 import { VerificationPanel } from "@/components/dashboard/VerificationPanel";
 import { RVEPanel } from "@/components/dashboard/RVEPanel";
 import { ProjectTable } from "@/components/dashboard/ProjectTable";
+import { ScenarioPanel } from "@/components/dashboard/ScenarioPanel";
+import { ExportMenu } from "@/components/dashboard/ExportMenu";
 import {
   heroMetrics,
   hectaresTimeSeries,
   carbonTimeSeries,
   waterTimeSeries,
+  projects,
 } from "@/data/mockData";
 
 export default function Index() {
@@ -20,19 +23,40 @@ export default function Index() {
   const [verification, setVerification] = useState("All Sources");
   const [timeMode, setTimeMode] = useState("12m");
 
+  // Filtered projects based on selected region
+  const filteredProjects = region === "All Regions"
+    ? projects
+    : projects.filter(p =>
+        region.includes(p.country) ||
+        region.toLowerCase().includes(p.region.toLowerCase()) ||
+        p.region.toLowerCase().includes(region.split("—")[1]?.trim().toLowerCase() ?? "")
+      );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Sticky filter bar */}
-      <FilterBar
-        selectedRegion={region}
-        setSelectedRegion={setRegion}
-        selectedSector={sector}
-        setSelectedSector={setSector}
-        selectedVerification={verification}
-        setSelectedVerification={setVerification}
-        selectedTime={timeMode}
-        setSelectedTime={setTimeMode}
-      />
+      <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
+        <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center gap-2">
+          <FilterBar
+            selectedRegion={region}
+            setSelectedRegion={setRegion}
+            selectedSector={sector}
+            setSelectedSector={setSector}
+            selectedVerification={verification}
+            setSelectedVerification={setVerification}
+            selectedTime={timeMode}
+            setSelectedTime={setTimeMode}
+          />
+          <div className="ml-auto">
+            <ExportMenu
+              selectedRegion={region}
+              selectedSector={sector}
+              selectedVerification={verification}
+              selectedTime={timeMode}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Dashboard body */}
       <div className="px-4 sm:px-6 py-6 space-y-8 max-w-[1600px] mx-auto">
@@ -42,6 +66,9 @@ export default function Index() {
           <div>
             <div className="text-xs font-mono text-foreground-subtle uppercase tracking-widest mb-1">
               Regenerative Impact Dashboard
+              {region !== "All Regions" && (
+                <span className="ml-2 text-recovery">· {region}</span>
+              )}
             </div>
             <h1 className="text-2xl font-semibold text-foreground leading-tight">
               Are we actually healing anything?
@@ -52,22 +79,10 @@ export default function Index() {
             </p>
           </div>
           <div className="hidden md:flex items-center gap-3 text-xs text-foreground-subtle font-mono">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-recovery" />
-              Recovering
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-watch" />
-              Watch
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-reversal" />
-              Reversing
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-insufficient" />
-              Insufficient data
-            </div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-recovery" />Recovering</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-watch" />Watch</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-reversal" />Reversing</div>
+            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-insufficient" />Insufficient data</div>
           </div>
         </div>
 
@@ -92,7 +107,10 @@ export default function Index() {
           </div>
           <div className="grid lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              <RegenerationMap />
+              <RegenerationMap
+                selectedRegion={region}
+                onRegionSelect={setRegion}
+              />
             </div>
             <div className="space-y-4">
               <TrendChart
@@ -162,13 +180,27 @@ export default function Index() {
           <RVEPanel />
         </section>
 
-        {/* ── Section 7: Project Table ──────────────────────────────────────── */}
+        {/* ── Section 7: Scenario Modeling ─────────────────────────────────── */}
         <section>
           <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
             <span className="w-3 h-px bg-foreground-subtle" />
-            06 · Project Explorer
+            06 · What-If Analysis
           </div>
-          <ProjectTable />
+          <ScenarioPanel />
+        </section>
+
+        {/* ── Section 8: Project Table ──────────────────────────────────────── */}
+        <section>
+          <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
+            <span className="w-3 h-px bg-foreground-subtle" />
+            07 · Project Explorer
+            {region !== "All Regions" && (
+              <span className="text-recovery font-mono">
+                · {filteredProjects.length} of {projects.length} projects
+              </span>
+            )}
+          </div>
+          <ProjectTable projects={filteredProjects} />
         </section>
 
         {/* Footer */}
