@@ -6,7 +6,7 @@ const SECTORS = ["All Sectors", "Forest", "Water", "Health", "Biodiversity", "Jo
 const VERIFICATION = ["All Sources", "Satellite Verified", "Field Verified", "Third-Party Audited", "Model Estimated"];
 const TIME_MODES = ["30d", "12m", "5y", "Inception"];
 
-interface FilterBarProps {
+export interface FilterBarProps {
   selectedRegion: string;
   setSelectedRegion: (v: string) => void;
   selectedSector: string;
@@ -15,16 +15,13 @@ interface FilterBarProps {
   setSelectedVerification: (v: string) => void;
   selectedTime: string;
   setSelectedTime: (v: string) => void;
+  exportMenu?: React.ReactNode;
 }
 
 function DropdownSelect({
   label, icon: Icon, value, options, onChange,
 }: {
-  label: string;
-  icon: React.ElementType;
-  value: string;
-  options: string[];
-  onChange: (v: string) => void;
+  label: string; icon: React.ElementType; value: string; options: string[]; onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -39,18 +36,20 @@ function DropdownSelect({
         <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute top-full mt-1 left-0 z-50 min-w-[200px] bg-surface-overlay border border-border rounded shadow-lg py-1">
-          {options.map((opt) => (
-            <button
-              key={opt}
-              onClick={() => { onChange(opt); setOpen(false); }}
-              className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-surface-raised
-                ${value === opt ? "text-recovery font-medium" : "text-foreground-muted"}`}
-            >
-              {opt}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute top-full mt-1 left-0 z-50 min-w-[200px] bg-surface-overlay border border-border rounded shadow-lg py-1">
+            {options.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => { onChange(opt); setOpen(false); }}
+                className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-surface-raised ${value === opt ? "text-recovery font-medium" : "text-foreground-muted"}`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -61,45 +60,37 @@ export function FilterBar({
   selectedSector, setSelectedSector,
   selectedVerification, setSelectedVerification,
   selectedTime, setSelectedTime,
+  exportMenu,
 }: FilterBarProps) {
   return (
     <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
       <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center gap-2">
-        {/* Brand */}
         <div className="flex items-center gap-2 mr-2">
           <div className="w-2 h-2 rounded-full bg-recovery animate-pulse-glow" />
           <span className="text-xs font-mono uppercase tracking-widest text-foreground-subtle">Atlas / Impact</span>
         </div>
-
-        <div className="flex-1 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <DropdownSelect label="Region" icon={Globe2} value={selectedRegion} options={REGIONS} onChange={setSelectedRegion} />
           <DropdownSelect label="Sector" icon={BarChart2} value={selectedSector} options={SECTORS} onChange={setSelectedSector} />
           <DropdownSelect label="Source" icon={CheckCircle} value={selectedVerification} options={VERIFICATION} onChange={setSelectedVerification} />
         </div>
-
-        {/* Time pills */}
         <div className="flex items-center gap-1 ml-auto">
           <Clock size={12} className="text-foreground-subtle mr-1" />
           {TIME_MODES.map((t) => (
             <button
               key={t}
               onClick={() => setSelectedTime(t)}
-              className={`px-2.5 py-1 rounded text-xs font-mono transition-colors
-                ${selectedTime === t
-                  ? "bg-recovery-dim text-recovery font-semibold border border-recovery/30"
-                  : "text-foreground-subtle hover:text-foreground hover:bg-surface"
-                }`}
+              className={`px-2.5 py-1 rounded text-xs font-mono transition-colors ${selectedTime === t ? "bg-recovery-dim text-recovery font-semibold border border-recovery/30" : "text-foreground-subtle hover:text-foreground hover:bg-surface"}`}
             >
               {t}
             </button>
           ))}
         </div>
-
-        {/* Comparison mode */}
         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-foreground-subtle hover:text-foreground hover:border-primary/40 transition-colors">
           <Filter size={12} />
           Compare
         </button>
+        {exportMenu}
       </div>
     </div>
   );
