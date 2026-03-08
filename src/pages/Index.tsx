@@ -35,28 +35,24 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Sticky filter bar */}
-      <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-md">
-        <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center gap-2">
-          <FilterBar
+      <FilterBar
+        selectedRegion={region}
+        setSelectedRegion={setRegion}
+        selectedSector={sector}
+        setSelectedSector={setSector}
+        selectedVerification={verification}
+        setSelectedVerification={setVerification}
+        selectedTime={timeMode}
+        setSelectedTime={setTimeMode}
+        exportMenu={
+          <ExportMenu
             selectedRegion={region}
-            setSelectedRegion={setRegion}
             selectedSector={sector}
-            setSelectedSector={setSector}
             selectedVerification={verification}
-            setSelectedVerification={setVerification}
             selectedTime={timeMode}
-            setSelectedTime={setTimeMode}
           />
-          <div className="ml-auto">
-            <ExportMenu
-              selectedRegion={region}
-              selectedSector={sector}
-              selectedVerification={verification}
-              selectedTime={timeMode}
-            />
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Dashboard body */}
       <div className="px-4 sm:px-6 py-6 space-y-8 max-w-[1600px] mx-auto">
