@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, ExternalLink } from "lucide-react";
 import type { Project } from "@/data/mockData";
 
@@ -41,9 +42,12 @@ function ConfidenceBar({ score }: { score: number }) {
   );
 }
 
-function ProjectRow({ project }: { project: Project }) {
+function ProjectRow({ project, onClick }: { project: Project; onClick: () => void }) {
   return (
-    <tr className="border-b border-border hover:bg-surface-raised transition-colors group">
+    <tr
+      className="border-b border-border hover:bg-surface-raised transition-colors group cursor-pointer"
+      onClick={onClick}
+    >
       {/* Status + name */}
       <td className="py-3 px-4">
         <div className="flex items-start gap-2">
@@ -107,6 +111,8 @@ function ProjectRow({ project }: { project: Project }) {
 }
 
 export function ProjectTable({ projects }: { projects: Project[] }) {
+  const navigate = useNavigate();
+
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden">
       <div className="flex items-start justify-between px-4 py-3 border-b border-border">
@@ -135,7 +141,11 @@ export function ProjectTable({ projects }: { projects: Project[] }) {
             </thead>
             <tbody>
               {projects.map(project => (
-                <ProjectRow key={project.id} project={project} />
+                <ProjectRow
+                  key={project.id}
+                  project={project}
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                />
               ))}
             </tbody>
           </table>
