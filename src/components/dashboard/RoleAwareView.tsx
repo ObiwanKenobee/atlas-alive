@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { AppRole } from "@/hooks/useAuth";
 import { heroMetrics, projects } from "@/data/mockData";
 import { MetricCard } from "@/components/dashboard/MetricCard";
