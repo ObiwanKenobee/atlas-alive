@@ -53,6 +53,7 @@ export default function Index() {
         setSelectedTime={setTimeMode}
         onOpenOperatorForm={() => setOperatorModalOpen(true)}
         onOpenAdmin={() => setAdminPanelOpen(true)}
+        realtimeStatus={realtimeStatus}
         exportMenu={
           <ExportMenu
             selectedRegion={region}
