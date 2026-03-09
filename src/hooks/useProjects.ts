@@ -31,6 +31,7 @@ export function dbToProject(p: DbProject): Project {
     riskLevel: p.risk_level,
     lastVerified,
     status: p.status,
+    notes: p.notes,
   };
 }
 
