@@ -36,8 +36,8 @@ export default function Index() {
   // Live projects from Supabase, falling back to mock data
   const { data: filteredProjects = [], isLoading: projectsLoading } = useProjects(region);
 
-  // Real-time subscriptions — invalidates queries on any DB change
-  useRealtimeProjects();
+  // Real-time subscriptions — invalidates queries on any DB change & returns live status
+  const realtimeStatus = useRealtimeProjects();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -53,6 +53,7 @@ export default function Index() {
         setSelectedTime={setTimeMode}
         onOpenOperatorForm={() => setOperatorModalOpen(true)}
         onOpenAdmin={() => setAdminPanelOpen(true)}
+        realtimeStatus={realtimeStatus}
         exportMenu={
           <ExportMenu
             selectedRegion={region}

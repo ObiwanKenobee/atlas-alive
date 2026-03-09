@@ -214,6 +214,7 @@ export interface Project {
   riskLevel: "low" | "medium" | "high";
   lastVerified: string;
   status: "active" | "watch" | "critical";
+  notes?: string | null;
 }
 
 export const projects: Project[] = [

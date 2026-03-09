@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Filter, ChevronDown, Globe2, Clock, CheckCircle, BarChart2, ClipboardList } from "lucide-react";
+import { Filter, ChevronDown, Globe2, Clock, CheckCircle, BarChart2, ClipboardList, Wifi, WifiOff } from "lucide-react";
 import { AuthPanel } from "@/components/dashboard/AuthPanel";
 import { useAuth } from "@/hooks/useAuth";
+import type { RealtimeStatus } from "@/hooks/useRealtimeProjects";
 
 const REGIONS = ["All Regions", "Kenya — Rift Valley", "Kenya — Eastern", "Kenya — Western", "DRC — Équateur", "Niger — Sahel", "Botswana — Ngamiland"];
 const SECTORS = ["All Sectors", "Forest", "Water", "Health", "Biodiversity", "Jobs", "Carbon"];
@@ -20,6 +21,7 @@ export interface FilterBarProps {
   exportMenu?: React.ReactNode;
   onOpenOperatorForm: () => void;
   onOpenAdmin?: () => void;
+  realtimeStatus?: RealtimeStatus;
 }
 
 function DropdownSelect({
@@ -59,6 +61,43 @@ function DropdownSelect({
   );
 }
 
+function RealtimeIndicator({ status }: { status: RealtimeStatus }) {
+  const { connected, updateCount, lastUpdate } = status;
+
+  const ago = lastUpdate
+    ? (() => {
+        const s = Math.floor((Date.now() - lastUpdate.getTime()) / 1000);
+        if (s < 60) return `${s}s ago`;
+        return `${Math.floor(s / 60)}m ago`;
+      })()
+    : null;
+
+  return (
+    <div
+      title={connected ? `Live — ${updateCount} update${updateCount !== 1 ? "s" : ""} this session${ago ? ` · last ${ago}` : ""}` : "Connecting to realtime feed…"}
+      className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-surface text-xs font-mono select-none"
+    >
+      {connected ? (
+        <>
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-recovery opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-recovery" />
+          </span>
+          <span className="text-recovery hidden sm:inline">Live</span>
+          {updateCount > 0 && (
+            <span className="text-foreground-subtle hidden md:inline">· {updateCount}</span>
+          )}
+        </>
+      ) : (
+        <>
+          <WifiOff size={11} className="text-foreground-subtle" />
+          <span className="text-foreground-subtle hidden sm:inline">Connecting</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function FilterBar({
   selectedRegion, setSelectedRegion,
   selectedSector, setSelectedSector,
@@ -67,6 +106,7 @@ export function FilterBar({
   exportMenu,
   onOpenOperatorForm,
   onOpenAdmin,
+  realtimeStatus,
 }: FilterBarProps) {
   const { role } = useAuth();
   const isOperator = role === "operator" || role === "admin";
@@ -108,6 +148,7 @@ export function FilterBar({
             Submit Data
           </button>
         )}
+        {realtimeStatus && <RealtimeIndicator status={realtimeStatus} />}
         {exportMenu}
         <AuthPanel onOpenOperatorForm={onOpenOperatorForm} onOpenAdmin={onOpenAdmin} />
       </div>
