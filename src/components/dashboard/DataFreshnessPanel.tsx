@@ -193,8 +193,8 @@ export function DataFreshnessPanel({ open, onClose }: Props) {
               <div key={feed.id} className={`border-b border-border p-5 ${isOverdue ? "bg-reversal-dim/10" : ""}`}>
                 <div className="flex items-start gap-3">
                   {/* Icon */}
-                  <div className={`p-2 rounded-lg border ${cfg.border} ${cfg.bg} flex-shrink-0`}>
-                    <Icon size={15} className={cfg.iconColor} />
+                <div className={`p-2 rounded-lg border ${cfg.border} ${cfg.bg} flex-shrink-0`}>
+                    <Icon size={15} className={feed.iconColor} />
                   </div>
 
                   {/* Info */}
