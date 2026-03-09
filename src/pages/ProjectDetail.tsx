@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { dbToProject } from "@/hooks/useProjects";
+import { useAuth } from "@/hooks/useAuth";
 import { TrendChart } from "@/components/dashboard/TrendChart";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Minus, ShieldCheck,
-  AlertTriangle, ExternalLink, CheckCircle, Clock, FileText, Loader2,
+  AlertTriangle, ExternalLink, CheckCircle, Clock, FileText,
+  Loader2, Pencil, X, Save,
 } from "lucide-react";
 import type { TimeSeriesPoint } from "@/data/mockData";
 import { rveAssets } from "@/data/mockData";
@@ -56,11 +59,56 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
+// ─── Inline edit types ────────────────────────────────────────────────────────
+type EditableFields = {
+  name: string;
+  status: "active" | "watch" | "critical";
+  trend: "accelerating" | "stable" | "stalling" | "reversing";
+  notes: string;
+};
+
+// ─── Inline field components ─────────────────────────────────────────────────
+function InlineInput({ value, onChange, className = "" }: { value: string; onChange: (v: string) => void; className?: string }) {
+  return (
+    <input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`bg-surface-overlay border border-recovery/40 rounded px-2 py-1 text-foreground text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-recovery/50 ${className}`}
+    />
+  );
+}
+
+function InlineSelect<T extends string>({
+  value, onChange, options,
+}: {
+  value: T; onChange: (v: T) => void; options: { value: T; label: string }[];
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as T)}
+      className="bg-surface-overlay border border-recovery/40 rounded px-2 py-1 text-foreground text-xs font-mono focus:outline-none focus:ring-1 focus:ring-recovery/50"
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  );
+}
+
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const qc = useQueryClient();
 
-  // Fetch project
+  const canEdit = role === "operator" || role === "admin";
+
+  const [editing, setEditing] = useState(false);
+  const [editFields, setEditFields] = useState<EditableFields | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // ─── Queries ────────────────────────────────────────────────────────────────
   const { data: project, isLoading: loadingProject } = useQuery({
     queryKey: ["project", id],
     queryFn: async () => {
@@ -75,7 +123,6 @@ export default function ProjectDetail() {
     enabled: !!id,
   });
 
-  // Fetch impact metrics
   const { data: metrics = [] } = useQuery({
     queryKey: ["impact_metrics", id],
     queryFn: async () => {
@@ -90,7 +137,6 @@ export default function ProjectDetail() {
     enabled: !!id,
   });
 
-  // Fetch verification records
   const { data: verifications = [] } = useQuery({
     queryKey: ["verification_records", id],
     queryFn: async () => {
@@ -105,7 +151,6 @@ export default function ProjectDetail() {
     enabled: !!id,
   });
 
-  // Fetch time series
   const { data: timeSeries = [] } = useQuery({
     queryKey: ["time_series", id],
     queryFn: async () => {
@@ -120,7 +165,51 @@ export default function ProjectDetail() {
     enabled: !!id,
   });
 
-  // Group time series by metric_type
+  // ─── Save mutation ───────────────────────────────────────────────────────────
+  const saveMutation = useMutation({
+    mutationFn: async (fields: EditableFields) => {
+      const { error } = await supabase
+        .from("projects")
+        .update({
+          name: fields.name,
+          status: fields.status,
+          trend: fields.trend,
+          notes: fields.notes || null,
+        })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["project", id] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      setEditing(false);
+      setSaveError(null);
+    },
+    onError: (err: Error) => {
+      setSaveError(err.message);
+    },
+  });
+
+  // ─── Enter / exit edit ───────────────────────────────────────────────────────
+  const startEdit = () => {
+    if (!project) return;
+    setEditFields({
+      name: project.name,
+      status: project.status as "active" | "watch" | "critical",
+      trend: project.trend as "accelerating" | "stable" | "stalling" | "reversing",
+      notes: project.notes ?? "",
+    });
+    setEditing(true);
+    setSaveError(null);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setEditFields(null);
+    setSaveError(null);
+  };
+
+  // ─── Group time series ───────────────────────────────────────────────────────
   const timeSeriesByMetric = timeSeries.reduce<Record<string, TimeSeriesPoint[]>>((acc, row) => {
     if (!acc[row.metric_type]) acc[row.metric_type] = [];
     acc[row.metric_type].push({
@@ -134,6 +223,7 @@ export default function ProjectDetail() {
     return acc;
   }, {});
 
+  // ─── Loading / not found ─────────────────────────────────────────────────────
   if (loadingProject) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center gap-2 text-foreground-subtle">
@@ -154,12 +244,13 @@ export default function ProjectDetail() {
     );
   }
 
-  // Find matching RVE assets (loosely match by region/type keyword)
   const relatedRVE = rveAssets.filter(
     (a) =>
       a.name.toLowerCase().includes(project.region.toLowerCase().split(" ")[0]) ||
       a.type.toLowerCase().includes(project.type.toLowerCase().split(" ")[0])
   );
+
+  const ef = editFields;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -173,11 +264,54 @@ export default function ProjectDetail() {
           Dashboard
         </button>
         <span className="text-foreground-subtle">/</span>
-        <span className="text-xs text-foreground font-medium truncate">{project.name}</span>
+        {editing && ef ? (
+          <InlineInput
+            value={ef.name}
+            onChange={(v) => setEditFields({ ...ef, name: v })}
+            className="text-xs font-medium max-w-[260px]"
+          />
+        ) : (
+          <span className="text-xs text-foreground font-medium truncate">{project.name}</span>
+        )}
         <div className={`ml-auto w-1.5 h-1.5 rounded-full ${statusDot[project.status]}`} />
+        {/* Edit / Save / Cancel controls */}
+        {canEdit && !editing && (
+          <button
+            onClick={startEdit}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border bg-surface hover:bg-surface-raised text-xs text-foreground-subtle hover:text-foreground transition-colors font-mono"
+          >
+            <Pencil size={11} /> Edit
+          </button>
+        )}
+        {editing && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => ef && saveMutation.mutate(ef)}
+              disabled={saveMutation.isPending}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-recovery/40 bg-recovery-dim text-recovery hover:bg-recovery hover:text-background text-xs font-semibold transition-colors"
+            >
+              {saveMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+              Save
+            </button>
+            <button
+              onClick={cancelEdit}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border bg-surface hover:bg-surface-raised text-xs text-foreground-subtle transition-colors"
+            >
+              <X size={11} /> Cancel
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="px-4 sm:px-6 py-6 space-y-8 max-w-[1400px] mx-auto">
+
+        {/* Error banner */}
+        {saveError && (
+          <div className="bg-reversal-dim border border-reversal/20 rounded px-4 py-3 text-xs text-reversal flex items-center gap-2">
+            <AlertTriangle size={12} />
+            {saveError}
+          </div>
+        )}
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -185,17 +319,69 @@ export default function ProjectDetail() {
             <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-1">
               {project.country} · {project.region}
             </div>
-            <h1 className="text-2xl font-semibold text-foreground">{project.name}</h1>
-            <div className="flex items-center gap-3 mt-2">
-              <span className="text-xs text-foreground-subtle px-2 py-0.5 rounded border border-border bg-surface">{project.type}</span>
-              <div className="flex items-center gap-1">
-                {trendIcon[project.trend]}
-                <span className="text-xs font-mono capitalize text-foreground-muted">{project.trend}</span>
+            {editing && ef ? (
+              <div className="space-y-3">
+                <InlineInput
+                  value={ef.name}
+                  onChange={(v) => setEditFields({ ...ef, name: v })}
+                  className="text-2xl font-semibold w-full max-w-lg"
+                />
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest">Status</span>
+                    <InlineSelect
+                      value={ef.status}
+                      onChange={(v) => setEditFields({ ...ef, status: v })}
+                      options={[
+                        { value: "active", label: "Active" },
+                        { value: "watch", label: "Watch" },
+                        { value: "critical", label: "Critical" },
+                      ]}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest">Trend</span>
+                    <InlineSelect
+                      value={ef.trend}
+                      onChange={(v) => setEditFields({ ...ef, trend: v })}
+                      options={[
+                        { value: "accelerating", label: "Accelerating" },
+                        { value: "stable", label: "Stable" },
+                        { value: "stalling", label: "Stalling" },
+                        { value: "reversing", label: "Reversing" },
+                      ]}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest block mb-1">Notes</span>
+                  <textarea
+                    value={ef.notes}
+                    onChange={(e) => setEditFields({ ...ef, notes: e.target.value })}
+                    rows={3}
+                    placeholder="Add notes…"
+                    className="w-full max-w-lg bg-surface-overlay border border-recovery/40 rounded px-3 py-2 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-recovery/50 resize-none"
+                  />
+                </div>
               </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded border ${riskColor[project.riskLevel]}`}>
-                {project.riskLevel} risk
-              </span>
-            </div>
+            ) : (
+              <>
+                <h1 className="text-2xl font-semibold text-foreground">{project.name}</h1>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="text-xs text-foreground-subtle px-2 py-0.5 rounded border border-border bg-surface">{project.type}</span>
+                  <div className="flex items-center gap-1">
+                    {trendIcon[project.trend]}
+                    <span className="text-xs font-mono capitalize text-foreground-muted">{project.trend}</span>
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded border ${riskColor[project.riskLevel]}`}>
+                    {project.riskLevel} risk
+                  </span>
+                </div>
+                {project.notes && (
+                  <p className="text-xs text-foreground-muted mt-2 max-w-lg">{project.notes}</p>
+                )}
+              </>
+            )}
           </div>
           <div className="text-right">
             <div className="text-2xl font-mono font-bold text-recovery">{project.valueEstimate}</div>
@@ -228,7 +414,7 @@ export default function ProjectDetail() {
                   key={metricType}
                   title={metricType.charAt(0).toUpperCase() + metricType.slice(1)}
                   subtitle={`${project.name} — ${metricType}`}
-                  unit={series[0] ? "" : ""}
+                  unit=""
                   data={series}
                   color="hsl(155, 65%, 45%)"
                   target
