@@ -11,9 +11,11 @@ import { ScenarioPanel } from "@/components/dashboard/ScenarioPanel";
 import { ExportMenu } from "@/components/dashboard/ExportMenu";
 import { FieldOperatorModal } from "@/components/dashboard/FieldOperatorModal";
 import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
+import { AdminPanel } from "@/components/dashboard/AdminPanel";
 import { RoleGate } from "@/components/dashboard/RoleGate";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjects } from "@/hooks/useProjects";
+import { useRealtimeProjects } from "@/hooks/useRealtimeProjects";
 import {
   heroMetrics,
   hectaresTimeSeries,
@@ -27,11 +29,15 @@ export default function Index() {
   const [verification, setVerification] = useState("All Sources");
   const [timeMode, setTimeMode] = useState("12m");
   const [operatorModalOpen, setOperatorModalOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
 
   const { role } = useAuth();
 
   // Live projects from Supabase, falling back to mock data
   const { data: filteredProjects = [], isLoading: projectsLoading } = useProjects(region);
+
+  // Real-time subscriptions — invalidates queries on any DB change
+  useRealtimeProjects();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -46,6 +52,7 @@ export default function Index() {
         selectedTime={timeMode}
         setSelectedTime={setTimeMode}
         onOpenOperatorForm={() => setOperatorModalOpen(true)}
+        onOpenAdmin={() => setAdminPanelOpen(true)}
         exportMenu={
           <ExportMenu
             selectedRegion={region}
@@ -185,7 +192,6 @@ export default function Index() {
           role={role}
           allow={["investor", "executive", "government"]}
           fallback={
-            // Show to all when not logged in (public view)
             !role ? <section>
               <div className="text-[10px] font-mono text-foreground-subtle uppercase tracking-widest mb-3 flex items-center gap-2">
                 <span className="w-3 h-px bg-foreground-subtle" />
@@ -236,7 +242,7 @@ export default function Index() {
         {/* Footer */}
         <footer className="border-t border-border pt-6 pb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="text-xs text-foreground-subtle font-mono">
-            Atlas Regenerative OS · Impact Dashboard v0.2 · Lovable Cloud
+            Atlas Regenerative OS · Impact Dashboard v0.3 · Lovable Cloud
           </div>
           <div className="text-[10px] text-foreground-subtle">
             Data freshness: Carbon 7d · Biodiversity 30d · Health 90d · Land 48h · Water 14d
@@ -248,6 +254,12 @@ export default function Index() {
       <FieldOperatorModal
         open={operatorModalOpen}
         onClose={() => setOperatorModalOpen(false)}
+      />
+
+      {/* Admin panel modal (admin only) */}
+      <AdminPanel
+        open={adminPanelOpen}
+        onClose={() => setAdminPanelOpen(false)}
       />
     </div>
   );

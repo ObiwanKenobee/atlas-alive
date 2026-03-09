@@ -19,6 +19,7 @@ export interface FilterBarProps {
   setSelectedTime: (v: string) => void;
   exportMenu?: React.ReactNode;
   onOpenOperatorForm: () => void;
+  onOpenAdmin?: () => void;
 }
 
 function DropdownSelect({
@@ -65,6 +66,7 @@ export function FilterBar({
   selectedTime, setSelectedTime,
   exportMenu,
   onOpenOperatorForm,
+  onOpenAdmin,
 }: FilterBarProps) {
   const { role } = useAuth();
   const isOperator = role === "operator" || role === "admin";
@@ -107,7 +109,7 @@ export function FilterBar({
           </button>
         )}
         {exportMenu}
-        <AuthPanel onOpenOperatorForm={onOpenOperatorForm} />
+        <AuthPanel onOpenOperatorForm={onOpenOperatorForm} onOpenAdmin={onOpenAdmin} />
       </div>
     </div>
   );
